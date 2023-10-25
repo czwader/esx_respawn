@@ -1,5 +1,6 @@
 local isDead = false
 local timeout = false
+local spawned = true
 local respawnPoints = {
 	vector4(-1343.6,729.0,185.72,205.44),
 	vector4(501.68,5604.52,797.92,354.72),
@@ -37,14 +38,40 @@ local respawnPoints = {
 	vector4(-464.96,-2302.2,63.0,232.0),
 	vector4(-453.24,-2424.0,6.0,227.76),
 	vector4(87.68,810.24,211.12,228.04),
-	
-
-	
 }
+
+CreateThread(function()
+	AddTextEntry("death_system:spawn", "Stiskni  ~INPUT_CONTEXT~ <font face='Fire Sans'>pro spawn.</font>")
+end)
+
 AddEventHandler('esx:onPlayerDeath', function(data)
-	Wait(2000)
 	isDead = true
-	RespawnPed()
+	spawned = false
+	SetTimeout(5000, function()
+		isDead = false	
+	end)
+	StartScreenEffect("DeathFailOut", 0, 0)
+	PlaySoundFrontend(-1, "Bed", "WastedSounds", 1)
+	ShakeGameplayCam("DEATH_FAIL_IN_EFFECT_SHAKE", 1.0)
+	local scaleform = RequestScaleformMovie("MP_BIG_MESSAGE_FREEMODE")
+	while not HasScaleformMovieLoaded(scaleform) do
+		Citizen.Wait(0)
+	end
+	PushScaleformMovieFunction(scaleform, "SHOW_SHARD_WASTED_MP_MESSAGE")
+	BeginTextComponent("STRING")
+	AddTextComponentString("~r~wasted")
+	EndTextComponent()
+	PopScaleformMovieFunctionVoid()
+	PlaySoundFrontend(-1, "TextHit", "WastedSounds", 1)
+	while isDead do
+		DrawScaleformMovieFullscreen(scaleform, 255, 255, 255, 255)
+		Citizen.Wait(0)
+	end
+	DoScreenFadeOut(1000)
+	Wait(1000)
+	RespawnTimeout()
+	StopScreenEffect("DeathFailOut")
+	
 end)
 
 
@@ -63,30 +90,45 @@ function getClosestVector(player, vectors)
 	return closestVector
 end
 
-function RespawnPed()
+function RespawnTimeout()
+	DoScreenFadeIn(1000)
 	local ped = PlayerPedId()
-	local respawnCoords = getClosestVector(ped, respawnPoints)
 	SetEntityVisible(ped, false)
+	SetEntityInvincible(ped, true)
 	FreezeEntityPosition(ped, true)
+	local respawnCoords = getClosestVector(ped, respawnPoints)
 	NetworkResurrectLocalPlayer(respawnCoords.x, respawnCoords.y, respawnCoords.z, respawnCoords.w, true, false)
+
 	ClearPedBloodDamage(ped)
-	ClearPedSecondaryTask(ped)
-	while isDead do
+	ClearPedSecondaryTask(ped)	
+	while not timeout do
 		Wait(0) 
 		local ped = PlayerPedId()
 		
 		SetEntityCoordsNoOffset(ped, respawnCoords.x, respawnCoords.y, respawnCoords.z+2, false, false, false, true)
 		if not timeout then 
 			timeout = true
-			SetTimeout(5000, function()
-				SetEntityVisible(ped, true)
-				local ped = PlayerPedId()
-				FreezeEntityPosition(ped, false)
-				isDead = false
+			SetTimeout(3000, function()
 				timeout = false
+				spawnRequest()
 			end)
 		end
 	end
 	TriggerServerEvent('esx:onPlayerSpawn')
 	TriggerEvent('esx:onPlayerSpawn')
+end
+
+function spawnRequest()
+	while not spawned do 
+		Wait(0)
+		DisplayHelpTextThisFrame("death_system:spawn")
+		if IsControlJustPressed(0, 38) then 
+			local ped = PlayerPedId()
+			SetEntityVisible(ped, true)
+			FreezeEntityPosition(ped, false)
+			SetEntityInvincible(ped, false)
+			spawned = true
+		end
+	end
+	
 end
