@@ -69,8 +69,10 @@ AddEventHandler('esx:onPlayerDeath', function(data)
 	end
 	DoScreenFadeOut(1000)
 	Wait(1000)
-	RespawnTimeout()
-	StopScreenEffect("DeathFailOut")
+	respawn()
+	TriggerServerEvent('esx:onPlayerSpawn')
+	TriggerEvent('esx:onPlayerSpawn')
+	
 	
 end)
 
@@ -90,7 +92,10 @@ function getClosestVector(player, vectors)
 	return closestVector
 end
 
-function RespawnTimeout()
+
+
+function respawn()
+	StopScreenEffect("DeathFailOut")
 	DoScreenFadeIn(1000)
 	local ped = PlayerPedId()
 	SetEntityVisible(ped, false)
@@ -101,26 +106,9 @@ function RespawnTimeout()
 
 	ClearPedBloodDamage(ped)
 	ClearPedSecondaryTask(ped)	
-	while not timeout do
-		Wait(0) 
-		local ped = PlayerPedId()
-		
-		SetEntityCoordsNoOffset(ped, respawnCoords.x, respawnCoords.y, respawnCoords.z+2, false, false, false, true)
-		if not timeout then 
-			timeout = true
-			SetTimeout(3000, function()
-				timeout = false
-				spawnRequest()
-			end)
-		end
-	end
-	TriggerServerEvent('esx:onPlayerSpawn')
-	TriggerEvent('esx:onPlayerSpawn')
-end
-
-function spawnRequest()
 	while not spawned do 
 		Wait(0)
+		SetEntityCoordsNoOffset(ped, respawnCoords.x, respawnCoords.y, respawnCoords.z+2, false, false, false, true)
 		DisplayHelpTextThisFrame("death_system:spawn")
 		if IsControlJustPressed(0, 38) then 
 			local ped = PlayerPedId()
@@ -130,5 +118,6 @@ function spawnRequest()
 			spawned = true
 		end
 	end
+	
 	
 end
